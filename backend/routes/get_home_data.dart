@@ -1,5 +1,5 @@
-/// HOME DATA API
-/// Returns:
-/// - total seeds
-/// - current streak
-/// Used for top UI display
+import 'package:dart_frog/dart_frog.dart';
+
+Future<Response> onRequest(RequestContext context) async {
+  return Response(body: 'Not implemented yet');
+}
