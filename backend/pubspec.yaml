@@ -8,8 +8,10 @@ environment:
 
 dependencies:
   dart_frog: ^1.0.0
+  dart_frog_web_socket: ^1.0.3
   envied: ^1.2.1
   http: ^1.1.0
+  logger: ^2.4.0
   supabase: ^2.6.3
 
 dev_dependencies:
