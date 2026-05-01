@@ -1,5 +1,5 @@
-/// BUY FLOWER API
-/// Handles:
-/// - checking if user has enough seeds
-/// - deducting seeds
-/// - adding flower to garden
+import 'package:dart_frog/dart_frog.dart';
+
+Future<Response> onRequest(RequestContext context) async {
+  return Response(body: 'Not implemented yet');
+}
