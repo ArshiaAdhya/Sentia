@@ -12,8 +12,8 @@ class PiiSanitizer {
     required String input,
     required Map<String, String> currentDictionary,
   }) async {
-    String workingText = input;
-    Map<String, String> newDictionary =
+    var workingText = input;
+    final newDictionary =
         Map<String, String>.from(currentDictionary);
 
     // 1. REGEX PASS (Structured PII)
@@ -51,28 +51,28 @@ class PiiSanitizer {
         body: jsonEncode({
           'inputs': workingText,
           'parameters': {
-            'aggregation_strategy': 'simple' 
-          }
+            'aggregation_strategy': 'simple', 
+          },
         }),
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> rawEntities = jsonDecode(response.body) as List<dynamic>;
+        final rawEntities = jsonDecode(response.body) as List<dynamic>;
 
         // We walk the string boundaries manually to capture the full word.
-        List<Map<String, dynamic>> entities = [];
+        final entities = <Map<String, dynamic>>[];
         
-        for (var raw in rawEntities) {
+        for (final raw in rawEntities) {
           final e = Map<String, dynamic>.from(raw);
-          int start = e['start'] as int;
-          int end = e['end'] as int;
+          var start = e['start'] as int;
+          var end = e['end'] as int;
 
           // Treat string as a char array. Walk the left pointer backward.
-          while (start > 0 && RegExp(r'[a-zA-Z0-9]').hasMatch(workingText[start - 1])) {
+          while (start > 0 && RegExp('[a-zA-Z0-9]').hasMatch(workingText[start - 1])) {
             start--;
           }
           // Walk the right pointer forward.
-          while (end < workingText.length && RegExp(r'[a-zA-Z0-9]').hasMatch(workingText[end])) {
+          while (end < workingText.length && RegExp('[a-zA-Z0-9]').hasMatch(workingText[end])) {
             end++;
           }
 
@@ -91,13 +91,13 @@ class PiiSanitizer {
 
         // 2. THE BOUNDARY MAPPER (Replacing the sloppy Blast Radius)
         // Find the exact start and end indexes of every ALIAS token in the text.
-        List<List<int>> aliasBounds = [];
-        final aliasRegex = RegExp(r'ALIAS_[A-Z]+_[0-9]+');
+        final aliasBounds = <List<int>>[];
+        final aliasRegex = RegExp('ALIAS_[A-Z]+_[0-9]+');
         for (final match in aliasRegex.allMatches(workingText)) {
           aliasBounds.add([match.start, match.end]);
         }
 
-        for (var entity in entities) {
+        for (final entity in entities) {
           // Fallback safely in case HF returns 'entity' instead of 'entity_group'
           final rawType = entity['entity_group'] ?? entity['entity'] ?? '';
           final type = rawType.toString().replaceAll('B-', '').replaceAll('I-', ''); 
@@ -107,7 +107,7 @@ class PiiSanitizer {
           final end = entity['end'] as int;
 
           // 3. EXACT BOUNDARY CHECK
-          bool isInsideAlias = false;
+          var isInsideAlias = false;
           for (final bound in aliasBounds) {
             // If the AI's token mathematically overlaps with our ALIAS bounds, it's a hallucination.
             if (start < bound[1] && end > bound[0]) {
@@ -123,7 +123,7 @@ class PiiSanitizer {
 
           // We only care about People, Organizations, and Locations
           if (type == 'PER' || type == 'ORG' || type == 'LOC') {
-            String tokenToUse = '';
+            var tokenToUse = '';
 
             final existingEntry = newDictionary.entries.where((e) => e.value.toLowerCase() == word.toLowerCase()).toList();
             
@@ -141,11 +141,11 @@ class PiiSanitizer {
         }
       } else {
         print(
-            'Hugging Face API Error: ${response.statusCode} - ${response.body}');
+            'Hugging Face API Error: ${response.statusCode} - ${response.body}',);
         // If HF fails, we gracefully fallback to the Regex-only scrub so the app doesn't crash
       }
     } catch (e) {
-      print("Sanitization Exception: $e");
+      print('Sanitization Exception: $e');
     }
 
     print('\n--- ZERO TRUST PIPELINE RESULT ---');

@@ -1,4 +1,4 @@
-import 'package:backend/services/ai_service.dart';
+import 'package:backend/services/ai/ai_service.dart';
 import 'package:dart_frog/dart_frog.dart';
 
 // 1. Create a single, persistent instance of the AI Service

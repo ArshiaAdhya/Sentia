@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:backend/services/ai_service.dart';
+import 'package:backend/services/ai/ai_service.dart';
 import 'package:backend/services/pii_sanitizer.dart';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:dart_frog_web_socket/dart_frog_web_socket.dart';
@@ -27,7 +27,7 @@ Handler get onRequest {
         channel.sink.add(jsonEncode({
           'type': 'dictionary_update',
           'dictionary': sanitizedPayload.updatedDictionary,
-        }));
+        }),);
 
         // 4. Get the AI Stream
         // *Note: Dart Frog websockets don't have access
@@ -43,14 +43,14 @@ Handler get onRequest {
           channel.sink.add(jsonEncode({
             'type': 'ai_chunk',
             'text': chunk,
-          }));
+          }),);
         }
       } catch (e) {
         print('WebSocket Error: $e');
         channel.sink.add(jsonEncode({
           'type': 'ai_chunk',
-          'text': '\n\n(Connection error. Please try again.)'
-        }));
+          'text': '\n\n(Connection error. Please try again.)',
+        }),);
       }
     });
   });
