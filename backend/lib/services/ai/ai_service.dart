@@ -28,22 +28,14 @@ class AiService {
 
   Future<void> init({
     required String apiKey,
-    String instructionsPath = 'instructions.txt',
+    required String systemPrompt,
     String? userContext,
   }) async {
     if (apiKey.isEmpty) {
       throw StateError('OPENROUTER_API_KEY is empty. Check your .env file.');
     }
 
-    final file = File(instructionsPath);
-    if (!file.existsSync()) {
-      throw StateError(
-        'instructions.txt not found at "$instructionsPath". '
-        'Make sure the file exists in the backend root.',
-      );
-    }
-
-    _systemPrompt = await file.readAsString();
+    _systemPrompt = systemPrompt;
 
     if (userContext != null && userContext.isNotEmpty) {
       _systemPrompt +=
@@ -74,6 +66,10 @@ class AiService {
     }
 
     _history.add({'role': 'user', 'content': userMessage.trim()});
+    // Keep only the last 25 messages to prevent token overflow
+    if (_history.length > 20) {
+      _history.removeRange(0, _history.length - 20);
+    }
 
     final messages = [
       {'role': 'system', 'content': _systemPrompt},
@@ -117,6 +113,10 @@ class AiService {
         }
 
         final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final choices = data['choices'] as List?;
+        if (choices == null || choices.isEmpty) {
+          return 'Hmm, I got a little confused 🐧 Could you say that again?';
+        }
         final text =
             (data['choices'] as List).first['message']['content'] as String? ??
             '';

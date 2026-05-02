@@ -13,8 +13,8 @@
 import 'package:supabase/supabase.dart';
 import '../../models/user_model.dart';
 import '../../models/seed_model.dart';
-import '../../utils/constants.dart';
-import '../../utils/helpers.dart';
+import '../../../utils/constants.dart';
+import '../../../utils/helpers.dart';
 
 class SeedService {
   final SupabaseClient _client;
