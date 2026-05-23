@@ -1,21 +1,17 @@
 import 'dart:io';
+
 import 'package:dart_frog/dart_frog.dart';
 import 'package:supabase/supabase.dart';
-import 'package:backend/env/envied.dart';
 
-// 1. Read the file synchronously into RAM. 
-// This happens exactly ONCE during the entire lifecycle of the server.
 final _cachedSystemPrompt = File('instructions.txt').readAsStringSync();
 
 final _supabaseClient = SupabaseClient(
-  Env.supabaseUrl,
-  Env.supabaseServiceRoleKey,
+  'https://jnvxhpjxktynvkqrjrfa.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudnhocGp4a3R5bnZrcXJqcmZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNDM2NjYsImV4cCI6MjA4NTYxOTY2Nn0.BDovwiDWt4m3SwTx57GRz2isJaaoI0xtQH_E4E1qcsM',
 );
 
 Handler middleware(Handler handler) {
   return handler
-    // Inject the Supabase Client
-    .use(provider<SupabaseClient>((context) => _supabaseClient))
-    // 2. Inject the cached prompt into the request pipeline
-    .use(provider<String>((context) => _cachedSystemPrompt));
+      .use(provider<SupabaseClient>((context) => _supabaseClient))
+      .use(provider<String>((context) => _cachedSystemPrompt));
 }
