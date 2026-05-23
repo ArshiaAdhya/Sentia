@@ -63,7 +63,7 @@ class PiiSanitizer {
         final entities = <Map<String, dynamic>>[];
         
         for (final raw in rawEntities) {
-          final e = Map<String, dynamic>.from(raw);
+          final e = Map<String, dynamic>.from(raw as Map);
           var start = e['start'] as int;
           var end = e['end'] as int;
 
