@@ -6,11 +6,6 @@
 // Only flowers where isActive = true are shown in the shop.
 
 class Flower {
-  final String id;
-  final String displayName;
-  final int seedCost;
-  final String assetUrl;
-  final bool isActive;
 
   Flower({
     required this.id,
@@ -29,6 +24,11 @@ class Flower {
       isActive: json['is_active'] as bool? ?? true,
     );
   }
+  final String id;
+  final String displayName;
+  final int seedCost;
+  final String assetUrl;
+  final bool isActive;
 
   Map<String, dynamic> toJson() => {
         'flower_id': id,

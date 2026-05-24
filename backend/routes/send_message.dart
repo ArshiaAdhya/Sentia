@@ -6,13 +6,14 @@
 /// 4. Calls seed service (calculate seeds)
 /// 5. Calls DB service (store everything)
 /// 6. Returns final response to frontend
+library;
 
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
 
-import '../lib/services/ai/ai_service.dart';
+import 'package:backend/services/ai/ai_service.dart';
 import 'package:supabase/supabase.dart' show SupabaseClient;
 
 Future<Response> onRequest(RequestContext context) async {
@@ -63,7 +64,7 @@ Future<Response> onRequest(RequestContext context) async {
     final aiService = AiService();
 
     await aiService.init(
-      apiKey: Platform.environment['OPENROUTER_API_KEY'] ?? '',
+      apiKey: Platform.environment['GEMINI_API_KEY'] ?? '',
       systemPrompt: systemPrompt,
     );
 

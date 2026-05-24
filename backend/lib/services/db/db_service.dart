@@ -13,6 +13,7 @@
 /// Initializes the global Supabase client (supabaseClient) from env vars
 /// SUPABASE_URL and SUPABASE_KEY. Call initSupabase() once at server startup.
 /// All repositories import and use supabaseClient directly.
+library;
 
 import 'dart:io';
 import 'package:supabase/supabase.dart';

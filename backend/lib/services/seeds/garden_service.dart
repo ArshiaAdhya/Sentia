@@ -8,14 +8,15 @@
 /// getUserGarden() — retrieves all flowers the user has planted so far
 ///
 /// Queries user_garden_items table directly via SupabaseClient.
+library;
 
 import 'package:supabase/supabase.dart';
-import '../../models/garden_model.dart';
+import 'package:backend/models/garden_model.dart';
 
 class GardenService {
-  final SupabaseClient _client;
 
   GardenService(this._client);
+  final SupabaseClient _client;
 
   // ── DB helpers ──────────────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ class GardenService {
         .eq('user_id', userId)
         .order('planted_at', ascending: false);
 
-    return response.map((row) => PlantedFlower.fromJson(row)).toList();
+    return response.map(PlantedFlower.fromJson).toList();
   }
 
   Future<PlantedFlower> _insertFlower({

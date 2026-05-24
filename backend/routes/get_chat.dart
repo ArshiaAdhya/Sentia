@@ -1,5 +1,6 @@
 /// CHAT HISTORY API
 /// Fetches previous chat messages for user
+library;
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:supabase/supabase.dart' show SupabaseClient;

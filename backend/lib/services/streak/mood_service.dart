@@ -4,9 +4,9 @@ import 'package:supabase/supabase.dart';
 /// Stores daily emotion
 /// Used for calendar visualization
 class MoodService {
-  final SupabaseClient supabase;
 
   MoodService(this.supabase);
+  final SupabaseClient supabase;
 
   /// Saves or updates the user's emotion for the current day in the journal_entries table.
   /// If it's the first message of the day, it sets the initial_mood.

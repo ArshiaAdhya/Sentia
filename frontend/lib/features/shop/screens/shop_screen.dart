@@ -6,7 +6,7 @@ import '../../garden_state.dart';
 class ShopScreen extends StatelessWidget {
   const ShopScreen({super.key});
 
-  void _purchaseFlower(BuildContext context, GardenState state, String id, String displayName, int cost) {
+  Future<void> _purchaseFlower(BuildContext context, GardenState state, String id, String displayName, int cost) async {
     if (state.seeds < cost) {
       showDialog(
         context: context,
@@ -36,8 +36,9 @@ class ShopScreen extends StatelessWidget {
     }
 
     // Process purchase!
-    final success = state.buyFlower(id, cost);
+    final bool success = await state.buyFlower(id, cost);
     if (success) {
+      if (!context.mounted) return;
       // Show elegant success animation dialog
       showDialog(
         context: context,

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
 
 class PlantedFlowerLocal {
   final String itemId;
@@ -39,13 +39,12 @@ class GardenState extends ChangeNotifier {
 
   int _seeds = 50;
   int _streak = 3;
-  int _points = 50;
-  String _username = '@Saloni';
+  int _points = 50; // Mocked local points for now
+  String _username = '@Player';
   List<PlantedFlowerLocal> _plantedFlowers = [];
   List<DateTime> _journalDates = [];
-  String? _selectedFlowerToPlant; // Flower waiting to be planted on next tap
+  String? _selectedFlowerToPlant; 
 
-  // Getters
   int get seeds => _seeds;
   int get streak => _streak;
   int get points => _points;
@@ -54,114 +53,110 @@ class GardenState extends ChangeNotifier {
   List<DateTime> get journalDates => _journalDates;
   String? get selectedFlowerToPlant => _selectedFlowerToPlant;
 
-  // Initialize and load from SharedPreferences
   Future<void> init() async {
+    final userId = await ApiService.getUserId();
+    if (userId.isEmpty) return;
+    
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _seeds = prefs.getInt('sentia_seeds') ?? 50;
-      _streak = prefs.getInt('sentia_streak') ?? 3;
-      _points = prefs.getInt('sentia_points') ?? 50;
-      _username = prefs.getString('sentia_username') ?? '@Saloni';
-
-      // Load planted flowers
-      final flowersJson = prefs.getString('sentia_planted_flowers');
-      if (flowersJson != null) {
-        final List<dynamic> decoded = jsonDecode(flowersJson);
-        _plantedFlowers = decoded
+      // 1. Get Home Data
+      final homeData = await ApiService.get('/get_home_data?user_id=$userId');
+      if (homeData.isNotEmpty) {
+         _seeds = homeData['seeds'] as int? ?? 0;
+         _streak = homeData['streak'] as int? ?? 0;
+      }
+      
+      // 2. Get Garden 
+      final gardenData = await ApiService.get('/get_garden?user_id=$userId');
+      if (gardenData['garden'] != null) {
+        final List<dynamic> gardenList = gardenData['garden'];
+        _plantedFlowers = gardenList
             .map((item) => PlantedFlowerLocal.fromJson(item as Map<String, dynamic>))
             .toList();
       }
 
-      // Load journal entries
-      final journalJson = prefs.getStringList('sentia_journal_dates');
-      if (journalJson != null) {
-        _journalDates = journalJson.map((d) => DateTime.parse(d)).toList();
+      // 3. Get Journals
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final journalData = await ApiService.get('/profile/journal?userId=$userId&date=$dateStr');
+      if (journalData['journals'] != null) {
+        final List<dynamic> jList = journalData['journals'];
+        if (jList.isNotEmpty && !_journalDates.any((d) => d.year == now.year && d.month == now.month && d.day == now.day)) {
+          _journalDates.add(now);
+        }
       }
     } catch (e) {
-      debugPrint('Error loading local state: $e');
+      debugPrint('Error loading backend state: $e');
     }
     notifyListeners();
   }
 
-  // Save methods
-  Future<void> _saveState() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('sentia_seeds', _seeds);
-      await prefs.setInt('sentia_streak', _streak);
-      await prefs.setInt('sentia_points', _points);
-      await prefs.setString('sentia_username', _username);
-
-      final flowersJson = jsonEncode(_plantedFlowers.map((f) => f.toJson()).toList());
-      await prefs.setString('sentia_planted_flowers', flowersJson);
-
-      final journalStrings = _journalDates.map((d) => d.toIso8601String()).toList();
-      await prefs.setStringList('sentia_journal_dates', journalStrings);
-    } catch (e) {
-      debugPrint('Error saving local state: $e');
-    }
-  }
-
-  // Set selected flower to plant
   void selectFlowerToPlant(String? itemId) {
     _selectedFlowerToPlant = itemId;
     notifyListeners();
   }
 
-  // Buy a flower from the shop
-  bool buyFlower(String itemId, int cost) {
+  Future<bool> buyFlower(String itemId, int cost) async {
     if (_seeds >= cost) {
       _seeds -= cost;
-      _selectedFlowerToPlant = itemId; // Queue it for planting
-      _saveState();
+      _selectedFlowerToPlant = itemId; 
       notifyListeners();
       return true;
     }
     return false;
   }
 
-  // Plant the queued flower at coordinates
-  void plantQueuedFlower(double posX, double posY) {
+  Future<void> plantQueuedFlower(double posX, double posY) async {
     if (_selectedFlowerToPlant != null) {
-      _plantedFlowers.add(PlantedFlowerLocal(
-        itemId: _selectedFlowerToPlant!,
-        posX: posX,
-        posY: posY,
-        plantedAt: DateTime.now(),
-      ));
+      final userId = await ApiService.getUserId();
+      final flowerId = _selectedFlowerToPlant!;
       _selectedFlowerToPlant = null;
-      _points += 10; // Plant rewards points!
-      _saveState();
-      notifyListeners();
-    }
-  }
 
-  // Complete a diary entry
-  void addDiaryEntry(String content) {
-    final now = DateTime.now();
-    
-    // Check if there is already an entry for today to avoid multiple streak bumps
-    bool alreadyJournaledToday = false;
-    for (var date in _journalDates) {
-      if (date.year == now.year && date.month == now.month && date.day == now.day) {
-        alreadyJournaledToday = true;
-        break;
+      try {
+        final res = await ApiService.post('/buy_flower', {
+          'user_id': userId,
+          'flower_id': flowerId,
+          'pos_x': posX,
+          'pos_y': posY,
+        });
+
+        if (res['planted_flower'] != null) {
+          _plantedFlowers.add(PlantedFlowerLocal.fromJson(res['planted_flower']));
+          if (res['remaining_seeds'] != null) {
+             _seeds = res['remaining_seeds'] as int;
+          }
+          _points += 10;
+          notifyListeners();
+        }
+      } catch (e) {
+        debugPrint('Planting failed: $e');
       }
     }
-
-    _journalDates.add(now);
-    _seeds += 20; // Journal reward
-    _points += 15; // Journal points
-    
-    if (!alreadyJournaledToday) {
-      _streak += 1;
-    }
-
-    _saveState();
-    notifyListeners();
   }
 
-  // Reset garden helper
+  Future<void> addDiaryEntry(String content) async {
+    final now = DateTime.now();
+    bool alreadyJournaledToday = _journalDates.any((date) => 
+        date.year == now.year && date.month == now.month && date.day == now.day);
+
+    try {
+      final userId = await ApiService.getUserId();
+      await ApiService.post('/profile/journal', {
+        'userId': userId,
+        'text': content,
+      });
+
+      if (!alreadyJournaledToday) {
+        _journalDates.add(now);
+        _seeds += 20; 
+        _points += 15; 
+        _streak += 1;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Journal push failed: $e');
+    }
+  }
+
   void resetState() {
     _seeds = 50;
     _streak = 3;
@@ -169,7 +164,7 @@ class GardenState extends ChangeNotifier {
     _plantedFlowers.clear();
     _journalDates.clear();
     _selectedFlowerToPlant = null;
-    _saveState();
     notifyListeners();
   }
 }
+

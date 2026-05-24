@@ -9,17 +9,18 @@
 /// computeStreakBonus()— +20 seeds every 7th consecutive day
 ///
 /// Queries journal_entries and users tables directly via SupabaseClient.
+library;
 
 import 'package:supabase/supabase.dart';
-import '../../models/user_model.dart';
-import '../../models/seed_model.dart';
-import '../../../utils/constants.dart';
-import '../../../utils/helpers.dart';
+import 'package:backend/models/user_model.dart';
+import 'package:backend/models/seed_model.dart';
+import 'package:backend/utils/constants.dart';
+import 'package:backend/utils/helpers.dart';
 
 class SeedService {
-  final SupabaseClient _client;
 
   SeedService(this._client);
+  final SupabaseClient _client;
 
   // ── DB helpers ──────────────────────────────────────────────────────────
 

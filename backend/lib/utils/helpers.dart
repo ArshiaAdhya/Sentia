@@ -5,6 +5,7 @@
 /// toIst()        — converts a UTC DateTime to IST (UTC+5:30)
 /// isSameIstDay() — checks if two timestamps fall on the same IST calendar day
 /// toDateString() — formats a DateTime as YYYY-MM-DD for Supabase date columns
+library;
 
 // Converts a UTC DateTime to IST (UTC+5:30).
 DateTime toIst(DateTime utc) => utc.toUtc().add(const Duration(hours: 5, minutes: 30));

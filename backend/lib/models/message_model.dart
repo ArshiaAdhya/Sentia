@@ -1,9 +1,5 @@
 /// Represents a single chat message between the user and Pip.
 class MessageModel {
-  final String sessionId;
-  final String role; // 'user' | 'assistant'
-  final String content;
-  final DateTime createdAt;
 
   const MessageModel({
     required this.sessionId,
@@ -19,6 +15,10 @@ class MessageModel {
         createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
             DateTime.now().toUtc(),
       );
+  final String sessionId;
+  final String role; // 'user' | 'assistant'
+  final String content;
+  final DateTime createdAt;
 
   Map<String, dynamic> toJson() => {
         'session_id': sessionId,

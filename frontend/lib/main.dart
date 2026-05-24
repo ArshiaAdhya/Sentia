@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'features/garden_state.dart';
 import 'features/navigation/main_navigation_wrapper.dart';
+import 'features/auth/screens/auth_screen.dart';
 
 void main() async {
   // Ensure Flutter engine is initialized before reading local storage
   WidgetsFlutterBinding.ensureInitialized();
   
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token');
+  
   // Initialize state and load user progress / garden coordinates from local cache
   final state = GardenState();
-  await state.init();
+  if (token != null) {
+    await state.init();
+  }
 
-  runApp(const SentiaApp());
+  runApp(SentiaApp(initialRouteIsHome: token != null));
 }
 
 class SentiaApp extends StatelessWidget {
-  const SentiaApp({super.key});
+  final bool initialRouteIsHome;
+  
+  const SentiaApp({super.key, required this.initialRouteIsHome});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +37,8 @@ class SentiaApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const MainNavigationWrapper(),
+      home: initialRouteIsHome ? const MainNavigationWrapper() : const AuthScreen(),
     );
   }
 }
+

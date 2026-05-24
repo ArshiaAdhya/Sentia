@@ -3,6 +3,7 @@
 /// - total seeds
 /// - current streak
 /// Used for top UI display
+library;
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:supabase/supabase.dart' show SupabaseClient;

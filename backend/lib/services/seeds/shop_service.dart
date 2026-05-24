@@ -8,15 +8,16 @@
 /// purchaseFlower()    — validates balance and deducts seeds directly in the DB
 ///
 /// Queries shop_catalog and users tables directly via SupabaseClient.
+library;
 
 import 'package:supabase/supabase.dart';
-import '../../models/flower_model.dart';
-import '../../models/user_model.dart';
+import 'package:backend/models/flower_model.dart';
+import 'package:backend/models/user_model.dart';
 
 class ShopService {
-  final SupabaseClient _client;
 
   ShopService(this._client);
+  final SupabaseClient _client;
 
   // ── DB helpers ──────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ class ShopService {
         .select()
         .eq('is_active', true);
 
-    return response.map((row) => Flower.fromJson(row)).toList();
+    return response.map(Flower.fromJson).toList();
   }
 
   Future<Flower?> _getFlowerById(String flowerId) async {
@@ -83,7 +84,7 @@ class ShopService {
           ...flower.toJson(),
           'canBuy': userSeeds >= flower.seedCost,
           'userSeeds': userSeeds,
-        }).toList();
+        },).toList();
   }
 
   Future<Flower?> getFlowerById(String flowerId) => _getFlowerById(flowerId);

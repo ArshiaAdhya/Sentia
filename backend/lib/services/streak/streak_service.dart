@@ -1,14 +1,14 @@
 import 'package:supabase/supabase.dart';
-import '../../models/user_model.dart';
+import 'package:backend/models/user_model.dart';
 
 /// STREAK SERVICE
 /// Tracks daily usage
 /// Updates streak count
 /// Provides streak bonus
 class StreakService {
-  final SupabaseClient supabase;
 
   StreakService(this.supabase);
+  final SupabaseClient supabase;
 
   /// Called when a user sends a chat message. 
   /// Checks the last entry date and updates the streak accordingly.
@@ -26,7 +26,7 @@ class StreakService {
     final now = DateTime.now().toUtc();
     final today = DateTime.utc(now.year, now.month, now.day);
     
-    int newStreak = user.streak;
+    var newStreak = user.streak;
     
     if (user.lastEntryDate == null) {
       // First time chatting ever

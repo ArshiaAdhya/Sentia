@@ -6,13 +6,9 @@
 /// All fields (seeds, streak, lastEntryDate, lastSeedUpdate) come directly
 /// from the database — this class just gives them proper Dart types so we
 /// can write user.seeds instead of user['seeds'] as int throughout the code.
+library;
 
 class AppUser {
-  final String id;
-  int seeds;
-  int streak;
-  DateTime? lastEntryDate;
-  DateTime? lastSeedUpdate;
 
   AppUser({
     required this.id,
@@ -35,6 +31,11 @@ class AppUser {
           : null,
     );
   }
+  final String id;
+  int seeds;
+  int streak;
+  DateTime? lastEntryDate;
+  DateTime? lastSeedUpdate;
 
   Map<String, dynamic> toJson() => {
         'id': id,

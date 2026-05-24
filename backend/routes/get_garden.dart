@@ -1,6 +1,7 @@
 /// GARDEN API
 /// Fetches planted flowers for user
 /// Returns garden state
+library;
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:supabase/supabase.dart' show SupabaseClient;

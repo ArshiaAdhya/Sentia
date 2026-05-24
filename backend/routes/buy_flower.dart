@@ -3,14 +3,15 @@
 /// - checking if user has enough seeds
 /// - deducting seeds
 /// - adding flower to garden
+library;
 
 import 'dart:convert';
 
 import 'package:dart_frog/dart_frog.dart';
 
 import 'package:supabase/supabase.dart' show SupabaseClient;
-import '../lib/services/seeds/garden_service.dart';
-import '../lib/services/seeds/shop_service.dart';
+import 'package:backend/services/seeds/garden_service.dart';
+import 'package:backend/services/seeds/shop_service.dart';
 
 
 Future<Response> onRequest(RequestContext context) async {

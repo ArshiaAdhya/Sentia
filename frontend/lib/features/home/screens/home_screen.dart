@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../garden_state.dart';
+import '../../../services/api_service.dart';
 
 // ─── Data model ───────────────────────────────────────────────────────────────
 enum _Sender { ai, user }
@@ -27,27 +28,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   final _state = GardenState();
 
-  // Seed chat with the welcome + demo conversation from the design
-  final List<_ChatMessage> _messages = [
-    _ChatMessage(
-      text: 'How are you, @Saloni? 🌸',
-      sender: _Sender.ai,
-    ),
-    _ChatMessage(
-      text: 'Ahh I failed my parents again',
-      sender: _Sender.user,
-    ),
-    _ChatMessage(
-      text: 'I am stuck in life',
-      sender: _Sender.user,
-    ),
-    _ChatMessage(
-      text: "Heyy, relax. I'm all ears, tell me what happened",
-      sender: _Sender.ai,
-    ),
-  ];
+  // Chat message list
+  final List<_ChatMessage> _messages = [];
 
   bool _isSending = false;
+  String _sessionId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'; // Mock session ID for demo
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChatHistory();
+  }
+
+  Future<void> _loadChatHistory() async {
+    try {
+      final res = await ApiService.get('/get_chat?session_id=$_sessionId');
+      // If we got history back, load it in!
+      if (res['messages'] != null && (res['messages'] as List).isNotEmpty) {
+        final msgs = res['messages'] as List;
+        setState(() {
+          _messages.clear();
+          for (final msg in msgs) {
+            _messages.add(_ChatMessage(
+              text: msg['content'] ?? '',
+              sender: msg['role'] == 'assistant' ? _Sender.ai : _Sender.user,
+            ));
+          }
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      debugPrint('Failed to load chat history: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -57,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
@@ -69,18 +82,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     _scrollToBottom();
 
-    // Simulate AI typing delay then respond
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (!mounted) return;
-      setState(() {
-        _messages.add(_ChatMessage(
-          text: "I hear you. That sounds really tough. Want to talk more about it? 🌱",
-          sender: _Sender.ai,
-        ));
-        _isSending = false;
+    try {
+      final userId = await ApiService.getUserId();
+      final res = await ApiService.post('/send_message', {
+        'user_id': userId,
+        'session_id': _sessionId,
+        'message': text,
       });
-      _scrollToBottom();
-    });
+
+      if (mounted) {
+        setState(() {
+          if (res['reply'] != null) {
+            _messages.add(_ChatMessage(
+              text: res['reply'],
+              sender: _Sender.ai,
+            ));
+          }
+          _isSending = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.add(_ChatMessage(
+            text: "I'm having trouble connecting right now. Let's try again in a moment. 🌱",
+            sender: _Sender.ai,
+          ));
+          _isSending = false;
+        });
+        _scrollToBottom();
+      }
+    }
   }
 
   void _scrollToBottom() {

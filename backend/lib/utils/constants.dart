@@ -6,6 +6,7 @@
 /// Maps each mood string to a seed reward value.
 /// Streak bonus fires every 7 days (streakBonusInterval) and adds streakBonusAmount seeds.
 /// Used by SeedService to compute daily rewards.
+library;
 
 const moodSeedValues = <String, int>{
   'happy': 15,

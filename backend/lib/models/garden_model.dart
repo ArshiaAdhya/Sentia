@@ -5,13 +5,9 @@
 /// Maps the `user_garden_items` Supabase table.
 /// itemId links to a flower in shop_catalog.
 /// posX and posY are pixel coordinates from the top-left of the garden canvas.
+library;
 
 class PlantedFlower {
-  final String userId;
-  final String itemId;
-  final double posX;
-  final double posY;
-  final DateTime plantedAt;
 
   PlantedFlower({
     required this.userId,
@@ -30,6 +26,11 @@ class PlantedFlower {
       plantedAt: DateTime.parse(json['planted_at'] as String),
     );
   }
+  final String userId;
+  final String itemId;
+  final double posX;
+  final double posY;
+  final DateTime plantedAt;
 
   Map<String, dynamic> toJson() => {
         'user_id': userId,
