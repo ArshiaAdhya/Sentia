@@ -1,20 +1,11 @@
-/// MAIN CHAT API
-/// Handles full backend flow:
-/// 1. Receives user message
-/// 2. Calls AI service (reply + emotion)
-/// 3. Calls streak & mood service
-/// 4. Calls seed service (calculate seeds)
-/// 5. Calls DB service (store everything)
-/// 6. Returns final response to frontend
-library;
-
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
+import 'package:supabase/supabase.dart' show SupabaseClient;
 
 import 'package:backend/services/ai/ai_service.dart';
-import 'package:supabase/supabase.dart' show SupabaseClient;
+import 'package:backend/services/pii_sanitizer.dart'; // Ensure this is imported
 
 Future<Response> onRequest(RequestContext context) async {
   try {
@@ -22,74 +13,69 @@ Future<Response> onRequest(RequestContext context) async {
     final systemPrompt = context.read<String>();
     final request = context.request;
 
-    // Only allow POST requests
     if (request.method != HttpMethod.post) {
-      return Response.json(
-        statusCode: 405,
-        body: {
-          'error': 'Method not allowed',
-        },
-      );
+      return Response.json(statusCode: 405, body: {'error': 'Method not allowed'});
     }
 
-    // Parse request body
     final body = await request.body();
     final data = jsonDecode(body) as Map<String, dynamic>;
 
     final userId = data['user_id'] as String?;
     final sessionId = data['session_id'] as String?;
-    final message = data['message'] as String?;
+    final rawMessage = data['message'] as String?;
+    
+    // 1. Grab the dictionary from the frontend
+    final rawDictionary = data['dictionary'] as Map<String, dynamic>? ?? {};
+    final currentDictionary = rawDictionary.map((k, v) => MapEntry(k, v.toString()));
 
-    // Validation
-    if (userId == null ||
-        sessionId == null ||
-        message == null ||
-        message.trim().isEmpty) {
-      return Response.json(
-        statusCode: 400,
-        body: {
-          'error': 'Missing required fields',
-        },
-      );
+    if (userId == null || sessionId == null || rawMessage == null || rawMessage.trim().isEmpty) {
+      return Response.json(statusCode: 400, body: {'error': 'Missing required fields'});
     }
 
-    // Fetch previous chat history
-    final previousMessages = await supabaseClient
+    // 2. THE ZERO-TRUST SHIELD: Sanitize before doing anything else
+    final sanitizedPayload = await PiiSanitizer.sanitize(
+      input: rawMessage,
+      currentDictionary: currentDictionary,
+    );
+    final cleanMessage = sanitizedPayload.cleanText;
+
+    // 3. THE MEMORY LIMIT: Fetch only the last 20 messages (descending, then reverse)
+    final historyResponse = await supabaseClient
         .from('chat_messages')
         .select('role, content')
         .eq('session_id', sessionId)
-        .order('created_at', ascending: true);
+        .order('created_at', ascending: false)
+        .limit(20);
+        
+    final previousMessages = List<Map<String, dynamic>>.from(historyResponse.reversed);
 
-    // Initialize AI service
+    // Initialize AI service (Check your env key name here!)
     final aiService = AiService();
-
     await aiService.init(
-      apiKey: Platform.environment['GEMINI_API_KEY'] ?? '',
+      apiKey: Platform.environment['OPENROUTER_API_KEY'] ?? '', 
       systemPrompt: systemPrompt,
     );
 
-    // Seed previous history into AI memory
+    // Seed history
     aiService.seedHistory(
-      previousMessages
-          .map<Map<String, String>>(
-            (msg) => {
-              'role': msg['role'] as String,
-              'content': msg['content'] as String,
-            },
-          )
-          .toList(),
+      previousMessages.map<Map<String, String>>(
+        (msg) => {
+          'role': msg['role'] as String,
+          'content': msg['content'] as String,
+        },
+      ).toList(),
     );
 
-    // Save user message
+    // 4. Save the CLEAN message, not the raw one
     await supabaseClient.from('chat_messages').insert({
       'session_id': sessionId,
       'role': 'user',
-      'content': message,
+      'content': cleanMessage,
       'created_at': DateTime.now().toUtc().toIso8601String(),
     });
 
     // Generate AI reply
-    final aiReply = await aiService.sendMessage(message);
+    final aiReply = await aiService.sendMessage(cleanMessage);
 
     // Save assistant reply
     await supabaseClient.from('chat_messages').insert({
@@ -99,19 +85,15 @@ Future<Response> onRequest(RequestContext context) async {
       'created_at': DateTime.now().toUtc().toIso8601String(),
     });
 
-    // Return response
+    // 5. Return the updated dictionary to the frontend SecureVault
     return Response.json(
       body: {
         'reply': aiReply,
         'session_id': sessionId,
+        'dictionary': sanitizedPayload.updatedDictionary,
       },
     );
   } catch (e) {
-    return Response.json(
-      statusCode: 500,
-      body: {
-        'error': e.toString(),
-      },
-    );
+    return Response.json(statusCode: 500, body: {'error': e.toString()});
   }
 }

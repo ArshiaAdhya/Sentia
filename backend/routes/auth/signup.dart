@@ -1,5 +1,6 @@
 import 'package:dart_frog/dart_frog.dart';
 import 'package:supabase/supabase.dart' hide HttpMethod;
+import 'package:backend/env/envied.dart'; // Import your Env class
 
 Future<Response> onRequest(RequestContext context) async {
   if (context.request.method != HttpMethod.post) {
@@ -18,11 +19,10 @@ Future<Response> onRequest(RequestContext context) async {
 
     final supabase = context.read<SupabaseClient>();
     
-    // We use the Service Role Key here specifically to bypass the "email rate limit exceeded"
-    // lock that Supabase puts on free-tier projects doing multiple rapid sign-ups.
+    // SECURED: Using environment variables instead of hardcoded strings
     final adminClient = SupabaseClient(
-      'https://jnvxhpjxktynvkqrjrfa.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudnhocGp4a3R5bnZrcXJqcmZhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDA0MzY2NiwiZXhwIjoyMDg1NjE5NjY2fQ.3rNBaRWmq5AiiMC-p8zTQFutMZ2bgwP11pf-bMQ07pA',
+      Env.supabaseUrl,
+      Env.supabaseServiceRoleKey, 
       authOptions: const AuthClientOptions(authFlowType: AuthFlowType.implicit),
     );
 
@@ -46,7 +46,7 @@ Future<Response> onRequest(RequestContext context) async {
       'user_id': res.user?.id,
       'token': res.session?.accessToken,
       'message': 'Signup successful',
-    },);
+    });
   } on AuthException catch (e) {
     return Response.json(statusCode: 400, body: {'error': e.message});
   } catch (e) {
