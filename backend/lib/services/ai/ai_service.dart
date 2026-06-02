@@ -84,7 +84,7 @@ class AiService {
           Uri.parse(_endpoint),
           headers: {
             'Authorization': 'Bearer $_apiKey',
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=utf-8',
             'HTTP-Referer': 'https://sentia.app',
             'X-Title': 'Sentia AI',
           },
@@ -112,7 +112,7 @@ class AiService {
           );
         }
 
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
         final choices = data['choices'] as List?;
         if (choices == null || choices.isEmpty) {
           return 'Hmm, I got a little confused 🐧 Could you say that again?';

@@ -44,7 +44,7 @@ class PiiSanitizer {
         Uri.parse(_hfEndpoint),
         headers: {
           'Authorization': 'Bearer $_hfToken',
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json; charset=utf-8',
           'x-wait-for-model' : 'true',
         },
         // workingText now has known entities already masked!
@@ -57,7 +57,7 @@ class PiiSanitizer {
       );
 
       if (response.statusCode == 200) {
-        final rawEntities = jsonDecode(response.body) as List<dynamic>;
+        final rawEntities = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
 
         // We walk the string boundaries manually to capture the full word.
         final entities = <Map<String, dynamic>>[];

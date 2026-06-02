@@ -535,6 +535,7 @@ Future<Response> onRequest(RequestContext context) async {
         'reply': aiReply,
         'session_id': sessionId,
         'dictionary': sanitizedPayload.updatedDictionary,
+        'sanitized_message': cleanMessage,
         'emotion': emotion,
         'conversation_completed': conversationCompleted,
         'streak': streak,

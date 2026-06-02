@@ -56,6 +56,14 @@ class ChatService {
         translatedUIString = translatedUIString.replaceAll(alias, realName);
       });
 
+      // --- DEBUG PRINTS FOR CONSOLE ---
+      print('\n=== CHAT LOG ===');
+      print('1. User Input (Raw): $rawUserMessage');
+      print('2. Sanitized Input (Sent to AI): ${response['sanitized_message'] ?? 'N/A'}');
+      print('3. AI Response (Raw with Tokens): $rawAiReply');
+      print('4. Final Output (Tokens Replaced): $translatedUIString');
+      print('================\n');
+
       // 7. Return the final string to the Controller
       return ChatResponse(
         reply: translatedUIString,
@@ -67,9 +75,9 @@ class ChatService {
             : null,
         conversationCompleted: response['conversation_completed'] == true,
       );
-    } catch (e) {
-      print('ChatService Error: $e');
-      throw Exception("Failed to connect to Sentia.");
+    } catch (e, stackTrace) {
+      print('ChatService [sendMessageToSentia] Error: $e\nStackTrace: $stackTrace');
+      throw Exception("Failed to connect to Sentia via /send_message: $e");
     }
   }
 }

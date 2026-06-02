@@ -56,7 +56,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl$path'),
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
         if (token != null) 'Authorization': 'Bearer $token',
       },
       body: jsonEncode(body),
@@ -64,13 +64,13 @@ class ApiService {
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isNotEmpty) {
-        return jsonDecode(response.body);
+        return jsonDecode(utf8.decode(response.bodyBytes));
       }
       return {};
     } else {
       if (response.body.isNotEmpty) {
         try {
-          final errorData = jsonDecode(response.body);
+          final errorData = jsonDecode(utf8.decode(response.bodyBytes));
           if (errorData is Map<String, dynamic>) {
             return errorData; // Return error JSON so UI can display it ('error' key)
           }
@@ -85,20 +85,20 @@ class ApiService {
     final response = await http.get(
       Uri.parse('$baseUrl$path'),
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
         if (token != null) 'Authorization': 'Bearer $token',
       },
     );
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isNotEmpty) {
-        return jsonDecode(response.body);
+        return jsonDecode(utf8.decode(response.bodyBytes));
       }
       return {};
     } else {
       if (response.body.isNotEmpty) {
         try {
-          final errorData = jsonDecode(response.body);
+          final errorData = jsonDecode(utf8.decode(response.bodyBytes));
           if (errorData is Map<String, dynamic>) {
             return errorData;
           }
