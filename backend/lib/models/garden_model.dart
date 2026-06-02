@@ -8,8 +8,8 @@
 library;
 
 class PlantedFlower {
-
   PlantedFlower({
+    this.id,
     required this.userId,
     required this.itemId,
     required this.posX,
@@ -19,6 +19,7 @@ class PlantedFlower {
 
   factory PlantedFlower.fromJson(Map<String, dynamic> json) {
     return PlantedFlower(
+      id: json['id']?.toString(),
       userId: json['user_id'] as String,
       itemId: json['item_id'] as String,
       posX: (json['pos_x'] as num).toDouble(),
@@ -26,6 +27,7 @@ class PlantedFlower {
       plantedAt: DateTime.parse(json['planted_at'] as String),
     );
   }
+  final String? id;
   final String userId;
   final String itemId;
   final double posX;
@@ -33,6 +35,7 @@ class PlantedFlower {
   final DateTime plantedAt;
 
   Map<String, dynamic> toJson() => {
+        if (id != null) 'id': id,
         'user_id': userId,
         'item_id': itemId,
         'pos_x': posX,

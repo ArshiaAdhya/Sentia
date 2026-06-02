@@ -1,9 +1,27 @@
 import 'api_service.dart';
 import 'secure_vault.dart';
 
+class ChatResponse {
+  final String reply;
+  final int? seeds;
+  final int? streak;
+  final String? emotion;
+  final Map<String, dynamic>? seedReward;
+  final bool conversationCompleted;
+
+  const ChatResponse({
+    required this.reply,
+    this.seeds,
+    this.streak,
+    this.emotion,
+    this.seedReward,
+    this.conversationCompleted = false,
+  });
+}
+
 class ChatService {
   /// Sends a message via REST, syncs the vault, and returns the fully translated reply
-  static Future<String> sendMessageToSentia({
+  static Future<ChatResponse> sendMessageToSentia({
     required String rawUserMessage,
     required String userId,
     required String sessionId,
@@ -22,7 +40,8 @@ class ChatService {
 
       // 3. Update our SecureVault with any new proper nouns the AI learned
       if (response['dictionary'] != null) {
-        await SecureVault.saveDictionary(Map<String, String>.from(response['dictionary']));
+        await SecureVault.saveDictionary(
+            Map<String, String>.from(response['dictionary']));
       }
 
       // 4. Grab the raw AI reply (still contains ALIAS_PER_1, etc.)
@@ -38,8 +57,16 @@ class ChatService {
       });
 
       // 7. Return the final string to the Controller
-      return translatedUIString;
-
+      return ChatResponse(
+        reply: translatedUIString,
+        seeds: response['seeds'] as int?,
+        streak: response['streak'] as int?,
+        emotion: response['emotion'] as String?,
+        seedReward: response['seed_reward'] is Map<String, dynamic>
+            ? response['seed_reward'] as Map<String, dynamic>
+            : null,
+        conversationCompleted: response['conversation_completed'] == true,
+      );
     } catch (e) {
       print('ChatService Error: $e');
       throw Exception("Failed to connect to Sentia.");

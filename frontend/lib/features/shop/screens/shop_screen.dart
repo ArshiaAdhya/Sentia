@@ -6,27 +6,32 @@ import '../../garden_state.dart';
 class ShopScreen extends StatelessWidget {
   const ShopScreen({super.key});
 
-  Future<void> _purchaseFlower(BuildContext context, GardenState state, String id, String displayName, int cost) async {
+  Future<void> _purchaseFlower(BuildContext context, GardenState state,
+      String id, String displayName, int cost) async {
     if (state.seeds < cost) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Text(
             'Need More Seeds! 🐧🌱',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textDark),
+            style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold, color: AppColors.textDark),
           ),
           content: Text(
             'You need $cost seeds to buy a $displayName, but you only have ${state.seeds} seeds.\n\nTip: Write in your diary to earn +20 seeds instantly!',
-            style: GoogleFonts.outfit(color: AppColors.textMedium, fontSize: 14),
+            style:
+                GoogleFonts.outfit(color: AppColors.textMedium, fontSize: 14),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'Okay',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold, color: AppColors.primaryDark),
               ),
             ),
           ],
@@ -67,18 +72,23 @@ class ShopScreen extends StatelessWidget {
                     color: Color(0xFFF0F7F1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.shopping_bag_outlined, color: AppColors.primaryDark, size: 48),
+                  child: const Icon(Icons.shopping_bag_outlined,
+                      color: AppColors.primaryDark, size: 48),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Purchased $displayName! 🎉',
-                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'You spent $cost seeds. Now, let\'s place it in your beautiful garden!',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(fontSize: 14, color: AppColors.textMedium),
+                  style: GoogleFonts.outfit(
+                      fontSize: 14, color: AppColors.textMedium),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
@@ -86,13 +96,15 @@ class ShopScreen extends StatelessWidget {
                   child: TextButton(
                     onPressed: () {
                       Navigator.of(context).pop(); // Close success dialog
-                      Navigator.of(context).pop(true); // Return to Garden tab signaling purchase
+                      Navigator.of(context)
+                          .pop(true); // Return to Garden tab signaling purchase
                     },
                     style: TextButton.styleFrom(
                       backgroundColor: AppColors.primaryDark,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
                     ),
                     child: Text(
                       'Plant Now',
@@ -111,7 +123,8 @@ class ShopScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE2EBE2), // Soft sage outline background color
+      backgroundColor:
+          const Color(0xFFE2EBE2), // Soft sage outline background color
       body: SafeArea(
         child: AnimatedBuilder(
           animation: GardenState(),
@@ -121,7 +134,8 @@ class ShopScreen extends StatelessWidget {
               children: [
                 // Top Custom Header (Floating Pill Style)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -134,19 +148,24 @@ class ShopScreen extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: AppStyles.glassPillDeco,
-                              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppColors.textDark),
+                              child: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  size: 16,
+                                  color: AppColors.textDark),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
                             decoration: AppStyles.glassPillDeco,
                             child: Row(
                               children: [
-                                const Icon(Icons.explore_outlined, color: AppColors.primaryDark, size: 16),
+                                const Text('🌱',
+                                    style: TextStyle(fontSize: 14)),
                                 const SizedBox(width: 6),
                                 Text(
-                                  '${state.seeds} Seeds',
+                                  '${state.seeds}',
                                   style: AppStyles.badgeText,
                                 ),
                               ],
@@ -154,7 +173,7 @@ class ShopScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      
+
                       // Title
                       Text(
                         'Sentia AI',
@@ -167,17 +186,17 @@ class ShopScreen extends StatelessWidget {
 
                       // Streak & Badge
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         decoration: AppStyles.glassPillDeco,
                         child: Row(
                           children: [
-                            const Text('🔥 ', style: TextStyle(fontSize: 14)),
                             Text(
                               '${state.streak}',
                               style: AppStyles.badgeText,
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.spa_rounded, color: AppColors.streakOrange, size: 14),
+                            const SizedBox(width: 6),
+                            const Text('🔥', style: TextStyle(fontSize: 14)),
                           ],
                         ),
                       ),
@@ -188,11 +207,13 @@ class ShopScreen extends StatelessWidget {
                 // Main Shop Card (Glassmorphic Outer Box)
                 Expanded(
                   child: Container(
-                    margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 4),
+                    margin: const EdgeInsets.only(
+                        left: 16, right: 16, bottom: 16, top: 4),
                     decoration: BoxDecoration(
                       color: AppColors.glassWhite,
                       borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                      border: Border.all(
+                          color: Colors.white.withOpacity(0.5), width: 1.5),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(32),
@@ -217,13 +238,16 @@ class ShopScreen extends StatelessWidget {
                             child: Image.asset(
                               'assets/images/garden_island.png',
                               fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) => Container(
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
                                 decoration: BoxDecoration(
-                                  color: AppColors.primaryLight.withOpacity(0.3),
+                                  color:
+                                      AppColors.primaryLight.withOpacity(0.3),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: const Center(
-                                  child: Icon(Icons.image_outlined, size: 40, color: AppColors.primaryDark),
+                                  child: Icon(Icons.image_outlined,
+                                      size: 40, color: AppColors.primaryDark),
                                 ),
                               ),
                             ),
@@ -233,7 +257,8 @@ class ShopScreen extends StatelessWidget {
                           // Flower catalog list
                           Expanded(
                             child: ListView(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
                               physics: const BouncingScrollPhysics(),
                               children: [
                                 _buildShopCard(
@@ -242,17 +267,17 @@ class ShopScreen extends StatelessWidget {
                                   id: 'rose',
                                   name: 'Roses',
                                   description: 'Beautiful red roses',
-                                  cost: 30,
+                                  cost: 20,
                                   imagePath: 'assets/images/rose.png',
                                 ),
                                 const SizedBox(height: 12),
                                 _buildShopCard(
                                   context: context,
                                   state: state,
-                                  id: 'jasmine',
-                                  name: 'Jasmine',
-                                  description: 'Fragrant white flowers',
-                                  cost: 20,
+                                  id: 'lavender',
+                                  name: 'Lavender',
+                                  description: 'Calming purple blossoms',
+                                  cost: 15,
                                   imagePath: 'assets/images/jasmine.png',
                                 ),
                                 const SizedBox(height: 12),
@@ -262,7 +287,7 @@ class ShopScreen extends StatelessWidget {
                                   id: 'sunflower',
                                   name: 'Sunflower',
                                   description: 'Tall sunny flowers',
-                                  cost: 25,
+                                  cost: 10,
                                   imagePath: 'assets/images/sunflower.png',
                                 ),
                                 const SizedBox(height: 12),
@@ -272,7 +297,7 @@ class ShopScreen extends StatelessWidget {
                                   id: 'tulip',
                                   name: 'Tulip',
                                   description: 'Elegant spring bloom',
-                                  cost: 15,
+                                  cost: 25,
                                   imagePath: 'assets/images/tulip.png',
                                 ),
                                 const SizedBox(height: 20),
@@ -361,7 +386,8 @@ class ShopScreen extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.explore_outlined, color: AppColors.primaryDark, size: 14),
+                    const Icon(Icons.explore_outlined,
+                        color: AppColors.primaryDark, size: 14),
                     const SizedBox(width: 4),
                     Text(
                       'Seeds required: $cost',

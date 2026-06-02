@@ -1,61 +1,52 @@
-import 'package:supabase/supabase.dart';
 import 'package:backend/models/user_model.dart';
+import 'package:backend/utils/helpers.dart';
+import 'package:supabase/supabase.dart';
 
 /// STREAK SERVICE
-/// Tracks daily usage
-/// Updates streak count
-/// Provides streak bonus
+/// Tracks one completed conversation per IST calendar day.
 class StreakService {
-
   StreakService(this.supabase);
+
   final SupabaseClient supabase;
 
-  /// Called when a user sends a chat message. 
-  /// Checks the last entry date and updates the streak accordingly.
+  DateTime _istDay(DateTime utcDateTime) {
+    final ist = toIst(utcDateTime);
+    return DateTime(ist.year, ist.month, ist.day);
+  }
+
   Future<AppUser> updateStreak(String userId) async {
-    // 1. Fetch current user data
-    final response = await supabase
-        .from('users')
-        .select()
-        .eq('id', userId)
-        .single();
-        
+    final response =
+        await supabase.from('users').select().eq('id', userId).single();
+
     final user = AppUser.fromJson(response);
-    
-    // 2. Calculate dates using UTC to avoid timezone issues
-    final now = DateTime.now().toUtc();
-    final today = DateTime.utc(now.year, now.month, now.day);
-    
+    final nowUtc = DateTime.now().toUtc();
+    final today = _istDay(nowUtc);
+
     var newStreak = user.streak;
-    
+
     if (user.lastEntryDate == null) {
-      // First time chatting ever
       newStreak = 1;
     } else {
-      final lastDate = user.lastEntryDate!.toUtc();
-      final lastDay = DateTime.utc(lastDate.year, lastDate.month, lastDate.day);
-      
+      final lastDay = _istDay(user.lastEntryDate!);
       final difference = today.difference(lastDay).inDays;
-      
+
       if (difference == 1) {
-        // Chatted yesterday, streak continues!
         newStreak += 1;
       } else if (difference > 1) {
-        // Missed a day, streak broken
         newStreak = 1;
       }
-      // If difference == 0, they already chatted today, streak stays the same
     }
-    
-    // 3. Update the database
-    await supabase.from('users').update({
-      'streak': newStreak,
-      'last_entry_date': now.toIso8601String(),
-    }).eq('id', userId);
-    
-    user.streak = newStreak;
-    user.lastEntryDate = now;
-    
-    return user;
+
+    final updated = await supabase
+        .from('users')
+        .update({
+          'streak': newStreak,
+          'last_entry_date': nowUtc.toIso8601String(),
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+    return AppUser.fromJson(updated);
   }
 }

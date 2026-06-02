@@ -2,17 +2,17 @@
 /// Handles:
 /// - checking if user has enough seeds
 /// - deducting seeds
-/// - adding flower to garden
+/// - saving the purchased flower as a pending garden item
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
 
 import 'package:supabase/supabase.dart' show SupabaseClient;
 import 'package:backend/services/seeds/garden_service.dart';
 import 'package:backend/services/seeds/shop_service.dart';
-
 
 Future<Response> onRequest(RequestContext context) async {
   try {
@@ -39,10 +39,7 @@ Future<Response> onRequest(RequestContext context) async {
     final posY = (data['pos_y'] as num?)?.toDouble();
 
     // Validation
-    if (userId == null ||
-        flowerId == null ||
-        posX == null ||
-        posY == null) {
+    if (userId == null || flowerId == null) {
       return Response.json(
         statusCode: 400,
         body: {
@@ -56,25 +53,49 @@ Future<Response> onRequest(RequestContext context) async {
     final gardenService = GardenService(supabaseClient);
 
     // Deduct seeds from user
-    final remainingSeeds = await shopService.purchaseFlower(
+    final purchase = await shopService.purchaseFlower(
       userId: userId,
       flowerId: flowerId,
     );
+    final canonicalFlowerId = purchase.flower.id;
 
-    // Add flower to garden
-    final plantedFlower = await gardenService.plantFlower(
+    // Save the purchase immediately so it survives restart/logout before tap.
+    final pendingFlower = await gardenService.reserveFlower(
       userId: userId,
-      itemId: flowerId,
-      posX: posX,
-      posY: posY,
+      itemId: canonicalFlowerId,
     );
+    final pendingFlowerJson = pendingFlower.toJson()
+      ..['display_name'] = purchase.flower.displayName
+      ..['asset_url'] = purchase.flower.assetUrl;
+
+    Map<String, dynamic>? plantedFlowerJson;
+    if (posX != null && posY != null) {
+      stdout.writeln(
+        '[PLANT] flower=$canonicalFlowerId x=$posX y=$posY user=$userId',
+      );
+      final plantedFlower = await gardenService.plantReservedFlower(
+        userId: userId,
+        itemId: canonicalFlowerId,
+        posX: posX,
+        posY: posY,
+        gardenItemId: pendingFlower.id,
+      );
+      stdout.writeln(
+        '[PLANT SAVED] itemId=${plantedFlower.id ?? plantedFlower.itemId}',
+      );
+      plantedFlowerJson = plantedFlower.toJson()
+        ..['display_name'] = purchase.flower.displayName
+        ..['asset_url'] = purchase.flower.assetUrl;
+    }
 
     // Success response
     return Response.json(
       body: {
         'message': 'Flower purchased successfully',
-        'remaining_seeds': remainingSeeds,
-        'planted_flower': plantedFlower.toJson(),
+        'remaining_seeds': purchase.remainingSeeds,
+        'flower_id': canonicalFlowerId,
+        'pending_flower': pendingFlowerJson,
+        if (plantedFlowerJson != null) 'planted_flower': plantedFlowerJson,
       },
     );
   } catch (e) {
