@@ -1,13 +1,21 @@
 import 'dart:io';
 
+import 'package:backend/env/envied.dart';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:supabase/supabase.dart' hide HttpMethod;
 
 final _cachedSystemPrompt = File('instructions.txt').readAsStringSync();
+final _supabaseUrl = (Platform.environment['SUPABASE_URL'] ?? '').trim().isEmpty
+    ? Env.supabaseUrl
+    : (Platform.environment['SUPABASE_URL'] ?? '').trim();
+final _supabaseKey =
+    (Platform.environment['SUPABASE_SERVICE_ROLE_KEY'] ?? '').trim().isEmpty
+        ? Env.supabaseServiceRoleKey
+        : (Platform.environment['SUPABASE_SERVICE_ROLE_KEY'] ?? '').trim();
 
 final _supabaseClient = SupabaseClient(
-  'https://jnvxhpjxktynvkqrjrfa.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudnhocGp4a3R5bnZrcXJqcmZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNDM2NjYsImV4cCI6MjA4NTYxOTY2Nn0.BDovwiDWt4m3SwTx57GRz2isJaaoI0xtQH_E4E1qcsM',
+  _supabaseUrl,
+  _supabaseKey,
   authOptions: const AuthClientOptions(authFlowType: AuthFlowType.implicit),
 );
 
@@ -24,11 +32,15 @@ Middleware _corsHeaders() {
     return (context) async {
       // Handle preflight OPTIONS request
       if (context.request.method == HttpMethod.options) {
-        return Response(statusCode: 204, headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Origin, Content-Type, Authorization',
-        },);
+        return Response(
+          statusCode: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers':
+                'Origin, Content-Type, Authorization',
+          },
+        );
       }
 
       // Process regular request

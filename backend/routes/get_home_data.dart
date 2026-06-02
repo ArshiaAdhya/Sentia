@@ -39,7 +39,7 @@ Future<Response> onRequest(RequestContext context) async {
     // Fetch user data
     final userData = await supabaseClient
         .from('users')
-        .select('seeds, streak')
+        .select()
         .eq('id', userId)
         .maybeSingle();
 
@@ -52,10 +52,20 @@ Future<Response> onRequest(RequestContext context) async {
       );
     }
 
+    final joinedSource = userData['joined_at'] ?? userData['created_at'];
+    var joinedYear = 2026;
+    if (joinedSource != null) {
+      joinedYear = DateTime.parse(joinedSource.toString()).year;
+    }
+
     return Response.json(
       body: {
         'seeds': userData['seeds'] ?? 0,
         'streak': userData['streak'] ?? 0,
+        'joined_year': joinedYear,
+        'username': userData['username'] ??
+            userData['name'] ??
+            userData['display_name'],
       },
     );
   } catch (e) {

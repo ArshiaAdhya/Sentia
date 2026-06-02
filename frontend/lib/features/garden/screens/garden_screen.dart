@@ -16,16 +16,24 @@ class GardenScreen extends StatefulWidget {
 }
 
 class _GardenScreenState extends State<GardenScreen> {
-  // Map flower itemId to corresponding asset paths
-  String _getFlowerAsset(String itemId) {
-    switch (itemId) {
+  // Map flower itemId/displayName to corresponding asset paths
+  String _getFlowerAsset(PlantedFlowerLocal flower) {
+    final key = (flower.displayName ?? flower.itemId).toLowerCase();
+    switch (key) {
       case 'rose':
+      case 'roses':
+      case '5bd47c16-28bb-4247-88f7-1b82d71cb554':
         return 'assets/images/rose.png';
       case 'jasmine':
+      case 'lavender':
+      case 'f2aaa580-c4ed-4af8-b865-3b318b2d4b11':
         return 'assets/images/jasmine.png';
       case 'sunflower':
+      case 'sunflowers':
+      case '032b9b57-0d68-45d3-be58-910785348ca6':
         return 'assets/images/sunflower.png';
       case 'tulip':
+      case '81d61616-707c-4856-81e2-f46765b0d76a':
         return 'assets/images/tulip.png';
       default:
         return 'assets/images/rose.png';
@@ -33,20 +41,27 @@ class _GardenScreenState extends State<GardenScreen> {
   }
 
   // Handle tap on the garden canvas to plant a queued flower
-  void _handleGardenTap(BuildContext context, TapUpDetails details, GardenState state) {
+  Future<void> _handleGardenTap(
+    BuildContext context,
+    TapUpDetails details,
+    GardenState state,
+  ) async {
     if (state.selectedFlowerToPlant == null) return;
 
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final localPosition = renderBox.globalToLocal(details.globalPosition);
-    
+    final localPosition = details.localPosition;
+
     // Plant the flower!
-    state.plantQueuedFlower(localPosition.dx, localPosition.dy);
+    final planted =
+        await state.plantQueuedFlower(localPosition.dx, localPosition.dy);
+    if (!context.mounted) return;
 
     // Show a micro-feedback SnackBar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Flower planted successfully! 🌸🌱',
+          planted
+              ? 'Flower planted successfully! 🌸🌱'
+              : 'Could not plant right now. Please try again.',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
         ),
         duration: const Duration(seconds: 2),
@@ -71,14 +86,16 @@ class _GardenScreenState extends State<GardenScreen> {
               // Full-Screen Scenic Zen Garden Background
               Positioned.fill(
                 child: GestureDetector(
-                  onTapUp: (details) => _handleGardenTap(context, details, state),
+                  onTapUp: (details) =>
+                      _handleGardenTap(context, details, state),
                   child: Image.asset(
                     'assets/images/garden_bg.png',
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       color: AppColors.creamBackground,
                       child: const Center(
-                        child: Icon(Icons.image_outlined, size: 80, color: AppColors.primaryLight),
+                        child: Icon(Icons.image_outlined,
+                            size: 80, color: AppColors.primaryLight),
                       ),
                     ),
                   ),
@@ -92,10 +109,11 @@ class _GardenScreenState extends State<GardenScreen> {
                   child: Stack(
                     children: state.plantedFlowers.map((flower) {
                       return Positioned(
-                        left: flower.posX - 28, // Offset so center of image lines up with tap point
-                        top: flower.posY - 56,  // Offset so base of stem lines up with tap point
+                        left: flower.posX -
+                            28, // Offset so center of image lines up with tap point
+                        top: flower.posY - 28, // Center image on tap point
                         child: AnimatedFlowerNode(
-                          assetPath: _getFlowerAsset(flower.itemId),
+                          assetPath: _getFlowerAsset(flower),
                         ),
                       );
                     }).toList(),
@@ -110,20 +128,22 @@ class _GardenScreenState extends State<GardenScreen> {
                 right: 0,
                 child: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         // Seeds Badge
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
                           decoration: AppStyles.glassPillDeco,
                           child: Row(
                             children: [
-                              const Icon(Icons.explore_outlined, color: AppColors.primaryDark, size: 16),
+                              const Text('🌱', style: TextStyle(fontSize: 14)),
                               const SizedBox(width: 6),
                               Text(
-                                '${state.seeds} Seeds',
+                                '${state.seeds}',
                                 style: AppStyles.badgeText,
                               ),
                             ],
@@ -142,15 +162,17 @@ class _GardenScreenState extends State<GardenScreen> {
 
                         // Streak Badge
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           decoration: AppStyles.glassPillDeco,
                           child: Row(
                             children: [
-                              const Text('🔥 ', style: TextStyle(fontSize: 14)),
                               Text(
                                 '${state.streak}',
                                 style: AppStyles.badgeText,
                               ),
+                              const SizedBox(width: 6),
+                              const Text('🔥', style: TextStyle(fontSize: 14)),
                             ],
                           ),
                         ),
@@ -167,7 +189,8 @@ class _GardenScreenState extends State<GardenScreen> {
                   left: 20,
                   right: 20,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: AppColors.primaryDark.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(20),
@@ -185,7 +208,7 @@ class _GardenScreenState extends State<GardenScreen> {
                         const Text('🌷 ', style: TextStyle(fontSize: 18)),
                         Expanded(
                           child: Text(
-                            'Tap anywhere on the grass or path to plant your ${state.selectedFlowerToPlant!.toUpperCase()}!',
+                            'Tap anywhere on the grass or path to plant your ${state.selectedFlowerDisplayName!.toUpperCase()}!',
                             style: GoogleFonts.outfit(
                               color: Colors.white,
                               fontSize: 13,
@@ -195,7 +218,8 @@ class _GardenScreenState extends State<GardenScreen> {
                         ),
                         GestureDetector(
                           onTap: () => state.selectFlowerToPlant(null),
-                          child: const Icon(Icons.cancel, color: Colors.white70, size: 20),
+                          child: const Icon(Icons.cancel,
+                              color: Colors.white70, size: 20),
                         ),
                       ],
                     ),
@@ -234,7 +258,8 @@ class _GardenScreenState extends State<GardenScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
+                        const Icon(Icons.arrow_forward_ios_rounded,
+                            color: Colors.white, size: 14),
                       ],
                     ),
                   ),
@@ -260,7 +285,8 @@ class AnimatedFlowerNode extends StatefulWidget {
   State<AnimatedFlowerNode> createState() => _AnimatedFlowerNodeState();
 }
 
-class _AnimatedFlowerNodeState extends State<AnimatedFlowerNode> with SingleTickerProviderStateMixin {
+class _AnimatedFlowerNodeState extends State<AnimatedFlowerNode>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   late Animation<double> _scaleAnimation;
 
@@ -293,10 +319,9 @@ class _AnimatedFlowerNodeState extends State<AnimatedFlowerNode> with SingleTick
         width: 56,
         height: 56,
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) => const Icon(
-          Icons.local_florist,
-          color: Colors.redAccent,
-          size: 40,
+        errorBuilder: (context, error, stackTrace) => const Text(
+          '🌸',
+          style: TextStyle(fontSize: 40),
         ),
       ),
     );

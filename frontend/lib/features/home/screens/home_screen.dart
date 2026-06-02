@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../garden_state.dart';
 import '../../../services/api_service.dart';
+import '../../../services/chat_service.dart';
 
 // ─── Data model ───────────────────────────────────────────────────────────────
 enum _Sender { ai, user }
@@ -32,17 +33,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final List<_ChatMessage> _messages = [];
 
   bool _isSending = false;
-  String _sessionId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'; // Mock session ID for demo
+  String? _sessionId;
 
   @override
   void initState() {
     super.initState();
-    _loadChatHistory();
+    _initSessionAndLoadHistory();
+  }
+
+  Future<void> _initSessionAndLoadHistory() async {
+    final userId = await ApiService.getUserId();
+    final sessionId = await ApiService.getOrCreateSessionId(userId);
+
+    if (!mounted) return;
+
+    setState(() {
+      _sessionId = sessionId;
+    });
+
+    await _loadChatHistory();
   }
 
   Future<void> _loadChatHistory() async {
+    final sessionId = _sessionId;
+    if (sessionId == null || sessionId.isEmpty) return;
+
     try {
-      final res = await ApiService.get('/get_chat?session_id=$_sessionId');
+      final res = await ApiService.get('/get_chat?session_id=$sessionId');
       // If we got history back, load it in!
       if (res['messages'] != null && (res['messages'] as List).isNotEmpty) {
         final msgs = res['messages'] as List;
@@ -72,6 +89,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
+    final sessionId = _sessionId;
+
+    if (sessionId == null || sessionId.isEmpty) return;
     if (text.isEmpty) return;
 
     setState(() {
@@ -84,29 +104,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     try {
       final userId = await ApiService.getUserId();
-      final res = await ApiService.post('/send_message', {
-        'user_id': userId,
-        'session_id': _sessionId,
-        'message': text,
-      });
+      if (userId.isEmpty) {
+        throw Exception('Session expired. Please login again.');
+      }
+
+      final res = await ChatService.sendMessageToSentia(
+        rawUserMessage: text,
+        userId: userId,
+        sessionId: sessionId,
+      );
+
+      _state.syncProgress(seeds: res.seeds, streak: res.streak);
+      if (res.seeds != null || res.streak != null) {
+        await _state.refreshHomeData();
+      }
+      if (res.conversationCompleted) {
+        await _state.loadJournalDates();
+      }
 
       if (mounted) {
         setState(() {
-          if (res['reply'] != null) {
-            _messages.add(_ChatMessage(
-              text: res['reply'],
-              sender: _Sender.ai,
-            ));
-          }
+          _messages.add(_ChatMessage(
+            text: res.reply,
+            sender: _Sender.ai,
+          ));
           _isSending = false;
         });
         _scrollToBottom();
+        _showSeedRewardIfNeeded(res.seedReward);
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _messages.add(_ChatMessage(
-            text: "I'm having trouble connecting right now. Let's try again in a moment. 🌱",
+            text:
+                "I'm having trouble connecting right now. Let's try again in a moment. 🌱",
             sender: _Sender.ai,
           ));
           _isSending = false;
@@ -128,6 +160,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
+  void _showSeedRewardIfNeeded(Map<String, dynamic>? reward) {
+    if (reward == null || reward['awarded'] != true || !mounted) return;
+
+    final earnedSeeds = _rewardInt(reward, 'earnedSeeds') ??
+        _rewardInt(reward, 'earnedMoodSeeds') ??
+        0;
+    final oldSeeds = _rewardInt(reward, 'oldSeeds') ?? 0;
+    final newSeeds = _rewardInt(reward, 'newSeeds') ??
+        _rewardInt(reward, 'totalSeeds') ??
+        oldSeeds + earnedSeeds;
+
+    if (earnedSeeds <= 0) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => SeedRewardDialog(
+        earnedSeeds: earnedSeeds,
+        oldSeeds: oldSeeds,
+        newSeeds: newSeeds,
+      ),
+    );
+  }
+
+  int? _rewardInt(Map<String, dynamic> reward, String key) {
+    final value = reward[key];
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '');
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
@@ -147,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           // ── Soft dark overlay for readability ─────────────────────────────
           Positioned.fill(
             child: Container(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withOpacity(0.18),
             ),
           ),
 
@@ -185,12 +247,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('⌀', style: TextStyle(fontSize: 14, color: Colors.white70)),
+                const Text('🌱', style: TextStyle(fontSize: 14)),
                 const SizedBox(width: 4),
                 AnimatedBuilder(
                   animation: _state,
                   builder: (_, __) => Text(
-                    '${_state.seeds} Seeds',
+                    '${_state.seeds}',
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -226,8 +288,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('🔥', style: TextStyle(fontSize: 14)),
-                const SizedBox(width: 4),
                 AnimatedBuilder(
                   animation: _state,
                   builder: (_, __) => Text(
@@ -240,7 +300,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Text('🌱', style: TextStyle(fontSize: 14)),
+                const Text('🔥', style: TextStyle(fontSize: 14)),
               ],
             ),
           ),
@@ -272,7 +332,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
-        mainAxisAlignment: isAI ? MainAxisAlignment.start : MainAxisAlignment.end,
+        mainAxisAlignment:
+            isAI ? MainAxisAlignment.start : MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (isAI) ...[
@@ -283,7 +344,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               margin: const EdgeInsets.only(right: 8, bottom: 2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
+                border:
+                    Border.all(color: Colors.white.withOpacity(0.6), width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.2),
@@ -302,50 +364,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
           // Bubble
           Flexible(
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.68,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isAI
-                    ? const Color(0xFF3B5E43).withOpacity(0.82)
-                    : Colors.white.withOpacity(0.82),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(20),
-                  topRight: const Radius.circular(20),
-                  bottomLeft: Radius.circular(isAI ? 4 : 20),
-                  bottomRight: Radius.circular(isAI ? 20 : 4),
-                ),
-                border: Border.all(
-                  color: isAI
-                      ? Colors.white.withOpacity(0.15)
-                      : Colors.white.withOpacity(0.7),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Text(
-                    msg.text,
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: isAI ? Colors.white : const Color(0xFF2D3730),
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ),
+            child: _ChatBubble(
+              isAI: isAI,
+              text: msg.text,
             ),
           ),
         ],
@@ -365,10 +386,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             margin: const EdgeInsets.only(right: 8, bottom: 2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
+              border:
+                  Border.all(color: Colors.white.withOpacity(0.6), width: 2),
             ),
             child: ClipOval(
-              child: Image.asset('assets/images/penguin_avatar.png', fit: BoxFit.cover),
+              child: Image.asset('assets/images/penguin_avatar.png',
+                  fit: BoxFit.cover),
             ),
           ),
           _GlassBubble(
@@ -399,7 +422,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.25),
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
+              border:
+                  Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
             ),
             child: Row(
               children: [
@@ -503,6 +527,73 @@ class _GlassPill extends StatelessWidget {
   }
 }
 
+class _ChatBubble extends StatelessWidget {
+  final bool isAI;
+  final String text;
+
+  const _ChatBubble({
+    required this.isAI,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(20),
+      topRight: const Radius.circular(20),
+      bottomLeft: Radius.circular(isAI ? 4 : 20),
+      bottomRight: Radius.circular(isAI ? 20 : 4),
+    );
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.74,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isAI
+              ? const Color(0xFF263F2C).withOpacity(0.94)
+              : Colors.white.withOpacity(0.94),
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: isAI
+                ? Colors.white.withOpacity(0.15)
+                : Colors.white.withOpacity(0.7),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              child: Text(
+                text,
+                softWrap: true,
+                overflow: TextOverflow.visible,
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: isAI ? Colors.white : const Color(0xFF1F2C24),
+                  height: 1.45,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _GlassBubble extends StatelessWidget {
   final Widget child;
   final bool isAI;
@@ -600,6 +691,102 @@ class _TypingDotState extends State<_TypingDot>
             color: Colors.white70,
             shape: BoxShape.circle,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class SeedRewardDialog extends StatelessWidget {
+  final int earnedSeeds;
+  final int oldSeeds;
+  final int newSeeds;
+
+  const SeedRewardDialog({
+    super.key,
+    required this.earnedSeeds,
+    required this.oldSeeds,
+    required this.newSeeds,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.95),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '🌱 +$earnedSeeds Seeds',
+              style: GoogleFonts.outfit(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF263F2C),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF5EF),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Seeds',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: const Color(0xFF5A685D),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$oldSeeds → $newSeeds',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF3B5E43),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B5E43),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+                child: Text(
+                  'Continue',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

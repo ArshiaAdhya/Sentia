@@ -2,22 +2,27 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Primary brand colors
-  static const Color primaryDark = Color(0xFF3B5E43);       // Dark forest green used in buttons and highlights
-  static const Color primaryMedium = Color(0xFF5D7B63);     // Sage green
-  static const Color primaryLight = Color(0xFFC3D2C4);      // Pale moss green
-  static const Color creamBackground = Color(0xFFF7F7F0);   // Neutral warm cream background
-  
+  static const Color primaryDark =
+      Color(0xFF3B5E43); // Dark forest green used in buttons and highlights
+  static const Color primaryMedium = Color(0xFF5D7B63); // Sage green
+  static const Color primaryLight = Color(0xFFC3D2C4); // Pale moss green
+  static const Color creamBackground =
+      Color(0xFFF7F7F0); // Neutral warm cream background
+
   // Neutral colors
-  static const Color textDark = Color(0xFF263328);          // Dark Charcoal-green text
-  static const Color textMedium = Color(0xFF5A685D);        // Muted grey-green text
-  static const Color glassWhite = Color(0xD9FFFFFF);        // White with 85% opacity
-  static const Color glassWhiteHeavy = Color(0xF2FFFFFF);   // White with 95% opacity
-  static const Color glassWhiteMuted = Color(0x99FFFFFF);   // White with 60% opacity
+  static const Color textDark = Color(0xFF263328); // Dark Charcoal-green text
+  static const Color textMedium = Color(0xFF5A685D); // Muted grey-green text
+  static const Color glassWhite = Color(0xD9FFFFFF); // White with 85% opacity
+  static const Color glassWhiteHeavy =
+      Color(0xF2FFFFFF); // White with 95% opacity
+  static const Color glassWhiteMuted =
+      Color(0x99FFFFFF); // White with 60% opacity
 
   // Accents
-  static const Color streakOrange = Color(0xFFFF7E36);      // Warm fiery orange for streak
-  static const Color pointBlue = Color(0xFF4BAAF5);         // Cool bright blue for diamonds
-  static const Color seedsGreen = Color(0xFF67B04D);        // Rich leaf green for seeds
+  static const Color streakOrange =
+      Color(0xFFFF7E36); // Warm fiery orange for streak
+  static const Color seedsGreen =
+      Color(0xFF67B04D); // Rich leaf green for seeds
 }
 
 class AppStyles {

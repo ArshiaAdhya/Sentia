@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants.dart';
+import '../../../services/api_service.dart';
+import '../../auth/screens/auth_screen.dart';
 import '../../diary/widgets/diary_modal.dart';
 import '../../garden_state.dart';
 
@@ -47,6 +49,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _calendarMonth = DateTime(_calendarMonth.year, _calendarMonth.month + 1);
     });
+  }
+
+  Future<void> _logout() async {
+    try {
+      await ApiService.post('/auth/logout', {});
+    } catch (_) {
+      // Local logout should still proceed if backend logout is unavailable.
+    }
+
+    await ApiService.clearAuthData();
+    GardenState().resetState();
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -134,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                             // Joined date
                             Text(
-                              'JOINED 2025',
+                              'JOINED ${state.joinedYear}',
                               style: GoogleFonts.outfit(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -150,9 +170,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
-                                _buildStatItem('🔥 ${state.streak}', 'Streak', AppColors.streakOrange),
-                                _buildStatItem('🌱 ${state.seeds}', 'Seeds', AppColors.seedsGreen),
-                                _buildStatItem('💎 ${state.points}', 'Points', AppColors.pointBlue),
+                                _buildStatItem('🔥 ${state.streak}', 'Streak',
+                                    AppColors.streakOrange),
+                                _buildStatItem('🌱 ${state.seeds}', 'Seeds',
+                                    AppColors.seedsGreen),
                               ],
                             ),
                           ],
@@ -177,7 +198,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primaryDark.withOpacity(0.08),
+                                      color: AppColors.primaryDark
+                                          .withOpacity(0.08),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
@@ -201,7 +223,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primaryDark.withOpacity(0.08),
+                                      color: AppColors.primaryDark
+                                          .withOpacity(0.08),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
@@ -271,12 +294,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: widget.onGoToShop,
                         child: Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 16, horizontal: 20),
                           decoration: AppStyles.glassPillDeco,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text('🌸  ', style: TextStyle(fontSize: 16)),
+                              const Text('🌸  ',
+                                  style: TextStyle(fontSize: 16)),
                               Text(
                                 'Make your garden prettier!',
                                 style: GoogleFonts.outfit(
@@ -286,6 +311,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _logout,
+                          icon: const Icon(Icons.logout_rounded),
+                          label: Text(
+                            'Logout',
+                            style:
+                                GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primaryDark,
+                            side: BorderSide(
+                              color: AppColors.primaryDark.withOpacity(0.25),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            backgroundColor: Colors.white.withOpacity(0.35),
                           ),
                         ),
                       ),
@@ -304,7 +354,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ─── Calendar grid ──────────────────────────────────────────────────────────
   Widget _buildCalendarGrid(BuildContext context, List<DateTime> journalDates) {
     final firstDay = DateTime(_calendarMonth.year, _calendarMonth.month, 1);
-    final daysInMonth = DateUtils.getDaysInMonth(_calendarMonth.year, _calendarMonth.month);
+    final daysInMonth =
+        DateUtils.getDaysInMonth(_calendarMonth.year, _calendarMonth.month);
     // Sunday = 0 offset for our grid (DateTime.weekday: Mon=1 … Sun=7)
     final startOffset = firstDay.weekday % 7; // Sun=0, Mon=1 … Sat=6
     final today = DateTime.now();
@@ -367,8 +418,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ─── Helpers ────────────────────────────────────────────────────────────────
   String _monthLabel(DateTime d) {
     const months = [
-      'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
-      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+      'JANUARY',
+      'FEBRUARY',
+      'MARCH',
+      'APRIL',
+      'MAY',
+      'JUNE',
+      'JULY',
+      'AUGUST',
+      'SEPTEMBER',
+      'OCTOBER',
+      'NOVEMBER',
+      'DECEMBER'
     ];
     return '${months[d.month - 1]} ${d.year}';
   }
@@ -438,7 +499,8 @@ class _DayTile extends StatelessWidget {
     } else if (isFuture) {
       bgColor = Colors.transparent;
       textColor = AppColors.textMedium.withOpacity(0.35);
-      border = Border.all(color: AppColors.textMedium.withOpacity(0.15), width: 1);
+      border =
+          Border.all(color: AppColors.textMedium.withOpacity(0.15), width: 1);
     } else {
       bgColor = const Color(0xFFE5EBE5);
       textColor = AppColors.textDark;
@@ -451,7 +513,8 @@ class _DayTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         shape: shape,
-        borderRadius: shape == BoxShape.circle ? null : BorderRadius.circular(8),
+        borderRadius:
+            shape == BoxShape.circle ? null : BorderRadius.circular(8),
         border: border,
       ),
       child: Center(

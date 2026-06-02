@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/constants.dart';
 import '../../garden_state.dart';
 
 class DiaryModal extends StatefulWidget {
-  /// The date this diary entry belongs to.
   final DateTime date;
 
   const DiaryModal({super.key, required this.date});
@@ -15,6 +15,22 @@ class DiaryModal extends StatefulWidget {
 
 class _DiaryModalState extends State<DiaryModal> {
   final TextEditingController _textController = TextEditingController();
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  bool get _isFutureDate {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDate =
+        DateTime(widget.date.year, widget.date.month, widget.date.day);
+    return selectedDate.isAfter(today);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEntry();
+  }
 
   @override
   void dispose() {
@@ -22,35 +38,95 @@ class _DiaryModalState extends State<DiaryModal> {
     super.dispose();
   }
 
-  void _saveEntry(BuildContext context) {
-    if (_textController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please write something in your diary first! 🐧',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
-          ),
-          backgroundColor: AppColors.primaryDark,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+  Future<void> _loadEntry() async {
+    try {
+      final entry = await GardenState().getDiaryEntry(widget.date);
+      if (mounted) _textController.text = entry;
+    } catch (e) {
+      debugPrint('Diary load failed: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveEntry(BuildContext context) async {
+    if (_isFutureDate) {
+      _showSnackBar(context, 'Future dates are view-only.');
       return;
     }
 
-    // Trigger state update & rewards!
-    final state = GardenState();
-    state.addDiaryEntry(_textController.text);
+    if (_textController.text.trim().isEmpty) {
+      _showSnackBar(context, 'Please write something in your diary first! 🐧');
+      return;
+    }
 
-    // Close the diary modal
-    Navigator.of(context).pop();
+    setState(() => _isSaving = true);
 
-    // Show a premium success reward dialog!
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) => const DiaryRewardDialog(),
+    try {
+      final result = await GardenState().addDiaryEntry(
+        widget.date,
+        _textController.text,
+      );
+
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+
+      if (result.rewardAwarded) {
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => DiaryRewardDialog(result: result),
+        );
+      } else {
+        _showSnackBar(context, 'Entry saved to your Mind Garden.');
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      _showSnackBar(context, e.toString().replaceAll('Exception: ', ''));
+      setState(() => _isSaving = false);
+    }
+  }
+
+  void _showSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: AppColors.primaryDark,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    const weekdays = [
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+      'SUNDAY',
+    ];
+    const months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    return '${weekdays[date.weekday - 1]}, '
+        '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   @override
@@ -60,7 +136,7 @@ class _DiaryModalState extends State<DiaryModal> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFFCFCF9), // Creamy white diary page color
+          color: const Color(0xFFFCFCF9),
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
@@ -71,12 +147,11 @@ class _DiaryModalState extends State<DiaryModal> {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,19 +198,12 @@ class _DiaryModalState extends State<DiaryModal> {
                 ],
               ),
               const SizedBox(height: 20),
-
-              // Lined Paper Writing Area
-              Flexible(
+              SizedBox(
+                height: 260,
                 child: Stack(
                   children: [
-                    // Lined Paper Background Painter
                     Positioned.fill(
-                      child: CustomPaint(
-                        painter: LinedPaperPainter(),
-                      ),
-                    ),
-
-                    // Cute flower outline sketch on bottom right
+                        child: CustomPaint(painter: LinedPaperPainter())),
                     Positioned(
                       bottom: 12,
                       right: 12,
@@ -145,7 +213,8 @@ class _DiaryModalState extends State<DiaryModal> {
                           'assets/images/jasmine.png',
                           width: 48,
                           height: 48,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
                             Icons.local_florist_outlined,
                             size: 40,
                             color: AppColors.textMedium,
@@ -153,37 +222,45 @@ class _DiaryModalState extends State<DiaryModal> {
                         ),
                       ),
                     ),
-
-                    // Actual transparent TextField matching the lines
                     TextField(
                       controller: _textController,
-                      maxLines: 8,
+                      enabled: !_isLoading && !_isSaving && !_isFutureDate,
+                      expands: true,
+                      maxLines: null,
+                      minLines: null,
+                      textAlignVertical: TextAlignVertical.top,
                       style: GoogleFonts.ebGaramond(
                         fontSize: 18,
-                        height: 1.55, // Matches the line spacing of the painter!
+                        height: 1.55,
                         color: const Color(0xFF2E3E32),
                         fontWeight: FontWeight.w500,
                       ),
                       cursorColor: AppColors.primaryDark,
                       decoration: InputDecoration(
-                        hintText: 'Today I felt...',
+                        hintText: _isLoading
+                            ? 'Opening your diary...'
+                            : 'Today I felt...',
                         hintStyle: GoogleFonts.ebGaramond(
                           fontSize: 18,
                           color: AppColors.textMedium.withOpacity(0.5),
                           fontStyle: FontStyle.italic,
                         ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+                        contentPadding: const EdgeInsets.only(
+                          top: 4,
+                          left: 4,
+                          right: 4,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 28),
-
-              // Save Button
               ElevatedButton(
-                onPressed: () => _saveEntry(context),
+                onPressed: _isLoading || _isSaving || _isFutureDate
+                    ? null
+                    : () => _saveEntry(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryDark,
                   foregroundColor: Colors.white,
@@ -195,7 +272,7 @@ class _DiaryModalState extends State<DiaryModal> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: Text(
-                  'Save Entry',
+                  _isSaving ? 'Saving...' : 'Save Entry',
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -209,32 +286,19 @@ class _DiaryModalState extends State<DiaryModal> {
       ),
     );
   }
-  // Helper to format date as "MONDAY, 23 MAY 2025"
-  String _formatDate(DateTime d) {
-    const weekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    return '${weekdays[d.weekday - 1]}, ${d.day} ${months[d.month - 1]} ${d.year}';
-  }
 }
 
-// Custom Painter to draw notebook horizontal lines
 class LinedPaperPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFDCDCD0) // Cozy faint grayish line color
-      ..strokeWidth = 1.0;
+      ..color = const Color(0xFFDCDCD0)
+      ..strokeWidth = 1;
 
-    double lineSpacing = 28.0; // Line spacing matching the TextField style
-    double startY = 28.0;
-
+    var startY = 28.0;
     while (startY < size.height) {
-      canvas.drawLine(
-        Offset(0, startY),
-        Offset(size.width, startY),
-        paint,
-      );
-      startY += lineSpacing;
+      canvas.drawLine(Offset(0, startY), Offset(size.width, startY), paint);
+      startY += 28;
     }
   }
 
@@ -242,9 +306,13 @@ class LinedPaperPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// A beautiful glassmorphic modal popping up on reward
 class DiaryRewardDialog extends StatelessWidget {
-  const DiaryRewardDialog({super.key});
+  final DiarySaveResult result;
+
+  const DiaryRewardDialog({
+    super.key,
+    required this.result,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -266,7 +334,6 @@ class DiaryRewardDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Floating Sparkly Success Icon
             Container(
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
@@ -281,7 +348,7 @@ class DiaryRewardDialog extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Entry Saved! 🌱',
+              '🌱 +${result.earnedSeeds} Seeds',
               style: GoogleFonts.outfit(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -300,19 +367,36 @@ class DiaryRewardDialog extends StatelessWidget {
             const SizedBox(height: 20),
             const Divider(color: Color(0xFFE5EBE5), height: 1),
             const SizedBox(height: 20),
-            
-            // Rewards Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildRewardBadge('🌱 +20', 'Seeds Earned'),
-                _buildRewardBadge('🔥 +1', 'Streak Day'),
-                _buildRewardBadge('💎 +15', 'Points Gain'),
-              ],
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF5EF),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Seeds',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: AppColors.textMedium,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${result.oldSeeds} → ${result.newSeeds}',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
-            
-            // Continue Button
             SizedBox(
               width: double.infinity,
               child: TextButton(
@@ -337,30 +421,6 @@ class DiaryRewardDialog extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildRewardBadge(String val, String label) {
-    return Column(
-      children: [
-        Text(
-          val,
-          style: GoogleFonts.outfit(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primaryDark,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 11,
-            color: AppColors.textMedium,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }

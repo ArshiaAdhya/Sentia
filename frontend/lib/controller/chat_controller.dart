@@ -39,7 +39,7 @@ class ChatController extends ChangeNotifier {
       final userId = await ApiService.getUserId();
 
       // 3. Hit the REST API
-      final fullReply = await ChatService.sendMessageToSentia(
+      final chatResponse = await ChatService.sendMessageToSentia(
         rawUserMessage: text,
         userId: userId,
         sessionId: _sessionId,
@@ -50,13 +50,13 @@ class ChatController extends ChangeNotifier {
       notifyListeners();
 
       // 5. Trigger the animation
-      await _animateTypewriterEffect(fullReply);
-
+      await _animateTypewriterEffect(chatResponse.reply);
     } catch (e) {
       _isThinking = false;
-      _messages.add(
-        ChatMessage(text: "I got my flippers tangled for a second 🐧 Can we try that again?", isUser: false)
-      );
+      _messages.add(ChatMessage(
+          text:
+              "I got my flippers tangled for a second 🐧 Can we try that again?",
+          isUser: false));
       notifyListeners();
       _scrollToBottom();
     }
@@ -70,12 +70,12 @@ class ChatController extends ChangeNotifier {
     for (int i = 0; i < fullText.length; i++) {
       aiMessage.text = fullText.substring(0, i + 1);
       notifyListeners();
-      
+
       // Auto-scroll slightly as the paragraph expands
       _scrollToBottom();
-      
+
       // 25ms feels like natural, fast typing
-      await Future.delayed(const Duration(milliseconds: 25)); 
+      await Future.delayed(const Duration(milliseconds: 25));
     }
   }
 

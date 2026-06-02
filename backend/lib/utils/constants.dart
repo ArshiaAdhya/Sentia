@@ -10,11 +10,10 @@ library;
 
 const moodSeedValues = <String, int>{
   'happy': 15,
-  'sad': 3,
-  'neutral': 7,
-  'angry': 5,
-  'stressed': 6,
-  'calm': 10,
+  'sad': 10,
+  'anxious': 12,
+  'reflective': 8,
+  'neutral': 5,
 };
 
 const streakBonusAmount = 20;

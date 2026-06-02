@@ -1,10 +1,11 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 class ApiService {
   static const String baseUrl = 'http://localhost:8080';
-  
+
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
@@ -12,9 +13,9 @@ class ApiService {
 
   static Future<String> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('user_id') ?? '00000000-0000-0000-0000-000000000000';
+    return prefs.getString('user_id') ?? '';
   }
-  
+
   static Future<void> saveAuthData(String userId, String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_id', userId);
@@ -25,9 +26,32 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_id');
     await prefs.remove('auth_token');
+    final sessionKeys = prefs
+        .getKeys()
+        .where((key) => key.startsWith('chat_session_'))
+        .toList();
+    for (final key in sessionKeys) {
+      await prefs.remove(key);
+    }
   }
 
-  static Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body) async {
+  static Future<String> getOrCreateSessionId(String userId) async {
+    if (userId.isEmpty) return '';
+
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'chat_session_$userId';
+    final existing = prefs.getString(key);
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+
+    final newSessionId = const Uuid().v4();
+    await prefs.setString(key, newSessionId);
+    return newSessionId;
+  }
+
+  static Future<Map<String, dynamic>> post(
+      String path, Map<String, dynamic> body) async {
     final token = await getToken();
     final response = await http.post(
       Uri.parse('$baseUrl$path'),
@@ -48,7 +72,7 @@ class ApiService {
         try {
           final errorData = jsonDecode(response.body);
           if (errorData is Map<String, dynamic>) {
-             return errorData; // Return error JSON so UI can display it ('error' key)
+            return errorData; // Return error JSON so UI can display it ('error' key)
           }
         } catch (_) {}
       }
@@ -76,7 +100,7 @@ class ApiService {
         try {
           final errorData = jsonDecode(response.body);
           if (errorData is Map<String, dynamic>) {
-             return errorData;
+            return errorData;
           }
         } catch (_) {}
       }

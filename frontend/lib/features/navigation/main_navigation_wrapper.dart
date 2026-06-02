@@ -6,6 +6,7 @@ import '../home/screens/home_screen.dart';
 import '../garden/screens/garden_screen.dart';
 import '../profile/screens/profile_screen.dart';
 import '../shop/screens/shop_screen.dart';
+import '../garden_state.dart';
 
 class MainNavigationWrapper extends StatefulWidget {
   const MainNavigationWrapper({super.key});
@@ -16,6 +17,12 @@ class MainNavigationWrapper extends StatefulWidget {
 
 class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
   int _currentIndex = 1; // Default to Home (index 1)
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => GardenState().init());
+  }
 
   // Navigate to Shop (can be triggered from home button or shortcut)
   void _navigateToShop() async {
@@ -41,7 +48,8 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
     ];
 
     return Scaffold(
-      extendBody: true, // Crucial so that page content renders behind the floating bottom bar
+      extendBody:
+          true, // Crucial so that page content renders behind the floating bottom bar
       body: Stack(
         children: [
           // Active page container
@@ -62,7 +70,8 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(36),
-                border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                border: Border.all(
+                    color: Colors.white.withOpacity(0.5), width: 1.5),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.08),
@@ -118,7 +127,9 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
     required String label,
   }) {
     final isActive = _currentIndex == index;
-    final color = isActive ? AppColors.primaryDark : AppColors.textMedium.withOpacity(0.7);
+    final color = isActive
+        ? AppColors.primaryDark
+        : AppColors.textMedium.withOpacity(0.7);
 
     return GestureDetector(
       onTap: () {
@@ -168,9 +179,11 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
             decoration: BoxDecoration(
               color: isActive ? AppColors.primaryDark : Colors.transparent,
               shape: BoxShape.circle,
-              border: isActive 
-                ? null 
-                : Border.all(color: AppColors.primaryDark.withOpacity(0.4), width: 1.5),
+              border: isActive
+                  ? null
+                  : Border.all(
+                      color: AppColors.primaryDark.withOpacity(0.4),
+                      width: 1.5),
             ),
             child: Icon(
               Icons.home_outlined,

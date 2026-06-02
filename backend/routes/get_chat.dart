@@ -5,6 +5,8 @@ library;
 import 'package:dart_frog/dart_frog.dart';
 import 'package:supabase/supabase.dart' show SupabaseClient;
 
+const _rewardMarkerPrefix = '[[reward_marker]]';
+
 Future<Response> onRequest(RequestContext context) async {
   try {
     final supabaseClient = context.read<SupabaseClient>();
@@ -36,10 +38,15 @@ Future<Response> onRequest(RequestContext context) async {
         .select()
         .eq('session_id', sessionId)
         .order('created_at', ascending: true);
+    final visibleMessages =
+        List<Map<String, dynamic>>.from(messages).where((message) {
+      final content = message['content']?.toString() ?? '';
+      return !content.startsWith(_rewardMarkerPrefix);
+    }).toList();
 
     return Response.json(
       body: {
-        'messages': messages,
+        'messages': visibleMessages,
       },
     );
   } catch (e) {
